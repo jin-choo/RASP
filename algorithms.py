@@ -6,7 +6,7 @@ from sklearn import metrics
 from ast import literal_eval
 from tqdm import tqdm
 from SimulMotif.motif_gen import *
-from copy import deepcopy
+from copy import copy
 
 
 def not_contains_duplicates(X):
@@ -198,7 +198,7 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
     for k in tqdm(range(1, k_tuples)):  # frequent itemset mining for motif from size 2
         baskets = baskets[np.in1d(baskets[:, 1], np.array(list(frequent_neuron_set)))]  # remove spikes of non-frequent neurons
         if epsilon != 0 and (k + 1) % epsilon == 0:  # copy previous count dictionary for approximate frequent itemset mining
-            count_dict_prev = deepcopy(count_dict)
+            count_dict_prev = count_dict.copy()
 
         count_dict = dict()
         for i in tqdm(range(int(recording_time / winlen))):  # divided by window length
@@ -477,7 +477,7 @@ def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold
 
     for k_tuple in tqdm(range(1, k_tuples)):
         itemset_list = []
-        itemset_index_dict_prev = deepcopy(itemset_index_dict)
+        itemset_index_dict_prev = itemset_index_dict.copy()
         itemset_index_dict = dict()
         itemset_index = 0
         itemset_number_list = []
