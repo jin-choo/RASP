@@ -1,12 +1,12 @@
-import numpy as np, yaml
+import numpy as np, yaml, neo, quantities as pq, elephant.conversion as conv
 from itertools import combinations, product, permutations
 from collections import Counter
 from matplotlib import pyplot as plt
 from sklearn import metrics
-from ast import literal_eval
 from tqdm import tqdm
 from SimulMotif.motif_gen import *
 from copy import copy
+from elephant.spade import _build_context
 
 
 def not_contains_duplicates(X):
@@ -126,46 +126,6 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
     baskets = baskets[np.lexsort((baskets[:, 1], baskets[:, 0]))]
     recording_time = params["recording"]["recording_time"] * 1000 / bin_size
 
-    # else:
-    #     f = open("motif_gt_neuron.txt", 'r')
-    #     f2 = open("motif_gt.txt", 'r')
-    #     for line in open("motif_gt_n.txt", 'r'):
-    #         neuron_num = int(line)
-    #         motif_neuron_num.append(neuron_num)
-    #         motif_neuron_append = []
-    #         motif_loc_append = []
-    #         for i in range(neuron_num):
-    #             motif_neuron_append.append(int(f.readline()))
-    #             motif_loc_append_list = np.array(list(map(int, f2.readline().split(','))))
-    #             motif_loc_append.append(motif_loc_append_list[motif_loc_append_list > 0])
-    #
-    #         motif_neuron_append = np.array(motif_neuron_append)
-    #         motif_neuron_append_argsort = motif_neuron_append.argsort()
-    #         motif_neuron_append = motif_neuron_append[motif_neuron_append_argsort]
-    #         motif_loc_append = np.array(motif_loc_append)
-    #         motif_loc_append = motif_loc_append[motif_neuron_append_argsort]
-    #         motif_loc_append_argsort = motif_loc_append[:, 0].argsort()
-    #         motif_neuron.append(motif_neuron_append[motif_loc_append_argsort])
-    #         motif_loc_append = motif_loc_append[motif_loc_append_argsort]
-    #         motif_loc.append(motif_loc_append)
-    #
-    #     f.close()
-    #     f2.close()
-    #     motif_neuron = np.array(motif_neuron, dtype=object)
-    #     motif_neuron_num = np.array(motif_neuron_num)
-    #     motif_loc = np.array(motif_loc, dtype=object)
-    #     activity_list = [np.array(list(map(int, line.strip().split(',')))) for line in open(f'{file_path}.txt', 'r')]
-    #     recording_time = len(activity_list)
-    #
-    #     baskets = []
-    #     for i in range(recording_time):
-    #         activity_list_i = np.where(activity_list[i] == 1)[0] + 1
-    #         len_activity_list_i = len(activity_list_i)
-    #         if len_activity_list_i > 0:
-    #             baskets += list(product([i], activity_list_i))
-    #
-    #     baskets = np.array(baskets)
-
     max_neuron = max(baskets[:, 1])  # max neuron id
     count_dict = Counter(baskets[:, 1])  # neuron: spike count
 
@@ -181,11 +141,18 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
 
     frequent_neuron_set = set()  # set of frequent neurons
     motif_neuron_set = set(motif_neuron_ for motif_neuron_set_ in motif_neuron for motif_neuron_ in motif_neuron_set_)  # set of neurons in motifs
+
+    itemset_index_dict = dict()
+    support_dict = dict()
+    itemset_index = 0
     for key in range(1, max_neuron + 1):
         try:
             value = count_dict[key]
         except:
             continue
+        itemset_index_dict[key] = itemset_index
+        itemset_index += 1
+        support_dict[key] = value / recording_time
         f.write(f"{key}: {value}\n")
         if key in motif_neuron_set:
             f2.write(f"{key}: {value}\n")
@@ -194,9 +161,10 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
 
     f.close()
     f2.close()
+    support_list = list(support_dict.values())
 
     for k in tqdm(range(1, k_tuples)):  # frequent itemset mining for motif from size 2
-        baskets = baskets[np.in1d(baskets[:, 1], np.array(list(frequent_neuron_set)))]  # remove spikes of non-frequent neurons
+        baskets = baskets[np.in1d(baskets[:, 1], np.array(list(frequent_neuron_set)))]  # remove spikes of neurons that are not included in set of statistically significant patterns of size − 1
         if epsilon != 0 and (k + 1) % epsilon == 0:  # copy previous count dictionary for approximate frequent itemset mining
             count_dict_prev = count_dict.copy()
 
@@ -211,7 +179,7 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
             for baskets_1_combination in combinations(baskets_1, k + 1):  # all patterns in 0~1 window
                 if baskets_1_combination[-1][0] - baskets_1_combination[0][0] < winlen:  # pattern length < window length
                     k_tuple = np.array(baskets_1_combination)[:, 1]  # tuple of neuron ids of detected pattern
-                    if not_contains_duplicates(k_tuple) and (k == 1 or sum(1 for permutation in permutations(k_tuple, k) if permutation in frequent_tuple_set) > k):  # no duplicated neurons in pattern and any subset of size - 1 of pattern is frequent
+                    if not_contains_duplicates(k_tuple) and (k == 1 or sum(1 for permutation in permutations(k_tuple, k) if permutation in frequent_tuple_set) > k):  # no duplicated neurons in pattern and every subset of size − 1 of pattern is statistically significant
                         if algorithm == 'exact':
                             k_tuple_interval = [(baskets_1_combination[j + 1][0] - baskets_1_combination[j][0]) for j in range(k)]
                         else:  # time intervals between neurons are converted to range time_interval
@@ -246,7 +214,7 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
                                         count_dict[k_tuple][interneuron_to_number(winlen, k, k_tuple_interval_)] = 1
 
             for j in range(k):
-                for baskets_12_combinations in product(combinations(baskets_1, j + 1), combinations(baskets_2, k - j)):
+                for baskets_12_combinations in product(combinations(baskets_1, j + 1), combinations(baskets_2, k - j)):  # all patterns between 0~1 and 1~2 window
                     basket_12_combination_list = []
                     for basket_12_combination in baskets_12_combinations:
                         basket_12_combination_list += list(basket_12_combination)
@@ -297,24 +265,24 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
             f = open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}.txt", 'w')
             f2 = open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}_gt.txt", 'w')
 
-        if epsilon != 0 and (k + 1) % epsilon == 0:
+        if epsilon != 0 and (k + 1) % epsilon == 0:  # approximate frequent itemset mining
             for i in range(1, pow(max_neuron, k) - 1):
-                key = number_to_itemset(max_neuron, k, i)
+                key = number_to_itemset(max_neuron, k, i)  # 1 2 3
                 try:
-                    interneuron_freq = {number_to_interneuron(winlen, k - 1, interneuron): freq for interneuron, freq in count_dict_prev[i].items()}
+                    interneuron_freq = {number_to_interneuron(winlen, k - 1, interneuron): freq for interneuron, freq in count_dict_prev[i].items()}  # 1 2 3
                 except:
                     continue
-                for j in [j_ for j_ in range(1, max_neuron + 1) if j_ not in key]:  # 4
+                for j in [j_ for j_ in range(1, max_neuron + 1) if j_ not in key]:  # 4 possible missing neuron
                     key_afi = key + (j,)  # 1 2 3 4
                     try:
-                        j_value = {number_to_interneuron(winlen, k - 1, interneuron): freq for interneuron, freq in count_dict_prev[itemset_tuple_to_number(max_neuron, k, key_afi[1:])].items()}  # 2 3 4
+                        j_interneuron_freq = {number_to_interneuron(winlen, k - 1, interneuron): freq for interneuron, freq in count_dict_prev[itemset_tuple_to_number(max_neuron, k, key_afi[1:])].items()}  # 2 3 4
                     except:
                         continue
                     for key_interneuron, key_freq in interneuron_freq.items():  # 1 2 3
-                        for j_interneuron, j_freq in j_value.items():  # 2 3 4
-                            if sum(key_interneuron, j_interneuron[-1]) < winlen:  # 1 - 4
+                        for j_interneuron, j_freq in j_interneuron_freq.items():  # 2 3 4
+                            if sum(key_interneuron, j_interneuron[-1]) < winlen:  # time interval 1 - 4 < window length
                                 try:
-                                    if k == 2:
+                                    if k == 2:  # list of count of all patterns of size - 1
                                         afi_count_list = [key_freq, j_freq, count_dict_prev[itemset_to_number(max_neuron, k, [key_afi[0], j])][interneuron_to_number(winlen, k - 1, [key_interneuron[0] + j_interneuron[0]])]]
                                         key_afi_interneuron = interneuron_to_number(winlen, k, [key_interneuron[0], j_interneuron[0]])
                                     elif key_interneuron[1:] == j_interneuron[:1]:  # 2 3 == 3 4
@@ -338,8 +306,8 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
                                 except:
                                     key_afi_count = 0
                                 try:
-                                    afi_count_min = max(min(sum(afi_count_list[:i_afi] + afi_count_list[i_afi + 1:]) for i_afi in range(k + 1)) - (k - 1) * key_afi_count, 0)
-                                    afi_count_sum = max(sum(afi_count_list) - k * key_afi_count, 0)
+                                    afi_count_min = max(min(sum(afi_count_list[:i_afi] + afi_count_list[i_afi + 1:]) for i_afi in range(k + 1)) - (k - 1) * key_afi_count, 0)  # minimum count of each neuron in afi
+                                    afi_count_sum = max(sum(afi_count_list) - k * key_afi_count, 0)  # sum count of afi
                                     if afi_count_min >= max(int(round(afi_count_sum * (1 - 1 / epsilon))), 1):  # count_threshold
                                         try:
                                             count_dict[key_afi_number][key_afi_interneuron] = afi_count_sum
@@ -350,132 +318,10 @@ def apriori(algorithm: str, time_interval: int, k_tuples: int, winlen: int, coun
 
         frequent_tuple_set = set()
         frequent_neuron_set = set()
-        motif_neuron_k = motif_neuron[motif_neuron_num > k]
+        motif_neuron_k = motif_neuron[motif_neuron_num > k]  # neurons in motif of size larger than k
         motif_neuron_k_permutations = list(enumerate([set(permutations(motif_neuron_k_i, k + 1)) for motif_neuron_k_i in motif_neuron_k]))
-        for i in range(1, pow(max_neuron, k + 1) - 1):
-            key = number_to_itemset(max_neuron, k + 1, i)
-            interneuron_freq = dict()
-            freq_max = 0
-            try:
-                for interneuron, freq in count_dict[i].items():
-                    interneuron_freq[number_to_interneuron(winlen, k, interneuron)] = freq
-                    if freq > freq_max:
-                        freq_max = freq
-            except:
-                continue
+        motif_loc_k = motif_loc[motif_neuron_num > k]
 
-            if (epsilon == 0 and freq_max >= count_threshold) or (epsilon != 0 and freq_max >= count_threshold * max((1 - ((k + 1) / epsilon) / (int((k + 1) / epsilon) + 1)), 0)):
-                frequent_tuple_set.add(key)
-                frequent_neuron_set |= set(key)
-
-            f.write(f"{key}: {interneuron_freq}\n")
-            true_interval_flag = False
-            for i, motif_neuron_k_permutation in motif_neuron_k_permutations:
-                if key in motif_neuron_k_permutation:
-                    if not true_interval_flag:
-                        true_interval_set = [set() for k_ in range(k)]
-                        true_interval_flag = True
-                    for k_ in range(k):
-                        for second_neuron in motif_loc[motif_neuron_num > k][i][motif_neuron_k[i] == key[k_ + 1]][0]:
-                            for first_neuron in motif_loc[motif_neuron_num > k][i][motif_neuron_k[i] == key[k_]][0]:
-                                true_interval = (second_neuron - first_neuron).astype(int)
-                                if 0 <= true_interval < winlen:
-                                    true_interval_set[k_].add(true_interval // time_interval * time_interval)
-
-            if true_interval_flag:
-                interneuron_freq_gt = {interneuron: freq for interneuron, freq in interneuron_freq.items() if interneuron in product(*true_interval_set)}
-                if interneuron_freq_gt:
-                    f2.write(f"{key}: {interneuron_freq_gt}\n")
-
-        f.close()
-        f2.close()
-
-
-def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold: int, file_path: str, probabilistic_participation: int, epsilon: float):
-    if file_path[:2] == 'gt':
-        # Load simulation parameters
-        with open("params.yaml") as f:
-            params = yaml.load(f, Loader=yaml.FullLoader)
-
-        if probabilistic_participation > 1:
-            params["noise"]["probabilistic_participation"] = 1 - 1 / probabilistic_participation
-
-        bin_size = 10
-
-        # Genereate non-motif activity
-        # spike_time: list containing every spikes
-        # spike_time_motif: list containing spikes induced by motifs
-        spike_time, spike_time_motif = non_motif_gen(params, seed=0)
-
-        motif_type = int(file_path[-1])
-        # Generate motif activity
-        gts = motif_gen(spike_time, spike_time_motif, motif_type, params, seed=motif_type)
-
-        motif_neuron = []
-        motif_neuron_num = []
-        for gt in gts:
-            NIDs = gt['NIDs'] + 1
-            motif_neuron.append(NIDs)
-            NIDs_size = NIDs.size
-            motif_neuron_num.append(NIDs_size)
-
-        motif_neuron = np.array(motif_neuron, dtype=object)
-        motif_neuron_num = np.array(motif_neuron_num)
-
-        baskets = []
-        for i_neuron, spike_list in enumerate(spike_time):
-            baskets += list(product([int(round(spike * (1000 / bin_size))) for spike in spike_list], [i_neuron + 1]))
-
-        baskets = np.array(baskets)
-        baskets = baskets[np.lexsort((baskets[:, 1], baskets[:, 0]))]
-        recording_time = params["recording"]["recording_time"] * 1000 / bin_size
-
-    else:
-        motif_neuron = []
-        motif_neuron_num = []
-        f = open("motif_gt_neuron.txt", 'r')
-        f2 = open("motif_gt.txt", 'r')
-        for line in open("motif_gt_n.txt", 'r'):
-            neuron_num = int(line)
-            motif_neuron_num.append(neuron_num)
-            motif_neuron_append = []
-            for i in range(neuron_num):
-                motif_neuron_append.append(int(f.readline()))
-            motif_neuron_append = np.array(motif_neuron_append)
-            motif_neuron_append_argsort = motif_neuron_append.argsort()
-            motif_neuron_append = motif_neuron_append[motif_neuron_append_argsort]
-            motif_loc_append = np.array(motif_loc_append)
-            motif_loc_append = motif_loc_append[motif_neuron_append_argsort]
-            motif_loc_append_argsort = motif_loc_append[:, 0].argsort()
-            motif_neuron.append(motif_neuron_append[motif_loc_append_argsort])
-
-        f.close()
-        f2.close()
-        motif_neuron = np.array(motif_neuron, dtype=object)
-        motif_neuron_num = np.array(motif_neuron_num)
-        activity_list = [np.array(list(map(int, line.strip().split(',')))) for line in open(f'{file_path}.txt', 'r')]
-        recording_time = len(activity_list)
-        baskets = []
-        for i in range(recording_time):
-            activity_list_i = np.where(activity_list[i] == 1)[0] + 1
-            len_activity_list_i = len(activity_list_i)
-            if len_activity_list_i > 0:
-                baskets += list(product([i], activity_list_i))
-        baskets = np.array(baskets)
-
-    max_neuron = max(baskets[:, 1])
-
-    itemset_index_dict = dict()
-    support_dict = dict()
-    for itemset_index, line in enumerate(open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_1.txt", 'r')):
-        line_split = line.rstrip('\n').split(': ', 1)
-        itemset = int(line_split[0])
-        itemset_index_dict[itemset] = itemset_index
-        support_dict[itemset] = int(line_split[1]) / recording_time
-
-    support_list = list(support_dict.values())
-
-    for k_tuple in tqdm(range(1, k_tuples)):
         itemset_list = []
         itemset_index_dict_prev = itemset_index_dict.copy()
         itemset_index_dict = dict()
@@ -485,48 +331,76 @@ def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold
         support_list = []
         leverage_list = []
         exp_sup_list = []
-        for line in open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}.txt", 'r'):
-            line_split = line.rstrip('\n').split(': ', 1)
-            itemset = list(literal_eval(line_split[0]))
-            product_number = 1
-            for item in itemset:
-                product_number *= support_dict[item]
-            itemset_number = itemset_to_number(max_neuron, k_tuple + 1, itemset)
-            itemset_list.append(itemset_number)
-            for interneuron, sup_ac in literal_eval(line_split[1]).items():
-                itemset_index_dict[itemset_interneuron_to_number(max_neuron, k_tuple + 1, itemset, winlen, interneuron)] = itemset_index
-                itemset_number_list.append(itemset_number)
-                itemset_index += 1
-                sup_ac /= recording_time
-                support_list.append(sup_ac)
-                try:
-                    sup_a = support_list_prev[itemset_index_dict_prev[itemset_interneuron_to_number(max_neuron, k_tuple + 1, itemset[:-1], winlen, interneuron[:-1])]]
-                except:
-                    sup_a = support_dict[itemset[0]]
-                leverage_list.append(sup_ac - sup_a * support_dict[itemset[-1]])
-                exp_sup_list.append(sup_ac / product_number)
-                # confidence = sup_ac / sup_a
-                # confidence_list[k_tuple].append(confidence)
-                # lift_list[k_tuple].append(confidence / sup_c)
-                # try:
-                #     conviction_list[k_tuple].append((1 - sup_c) / (1 - confidence))
-                # except:
-                #     conviction_list[k_tuple].append(math.inf)
-
         itemset_index_list_gt = []
-        for line in open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}_gt.txt", 'r'):
-            line_split = line.rstrip('\n').split(': ', 1)
-            itemset = list(literal_eval(line_split[0]))
-            for interneuron, sup_ac in literal_eval(line_split[1]).items():
-                itemset_index_list_gt.append(itemset_index_dict[itemset_interneuron_to_number(max_neuron, k_tuple + 1, itemset, winlen, interneuron)])
+        for i in range(1, pow(max_neuron, k + 1) - 1):
+            key = number_to_itemset(max_neuron, k + 1, i)
+            interneuron_freq = dict()
+            freq_max = 0
 
-        metric_list_dict = {'support': support_list, 'leverage': leverage_list, 'exp_sup': exp_sup_list}  # , 'confidence': confidence_list[k_tuple], 'lift': lift_list[k_tuple], 'conviction': conviction_list[k_tuple]
+            product_number = 1
+            for item in key:
+                product_number *= support_dict[item]
 
-        motif_neuron_k = motif_neuron[motif_neuron_num > k_tuple]
-        condition_positive_set = [set(itemset_tuple_to_number(max_neuron, k_tuple + 1, condition_positive_tuple) for condition_positive_tuple in permutations(motif_neuron_k_combination)) for motif_neuron_k_i in motif_neuron_k for motif_neuron_k_combination in combinations(motif_neuron_k_i, k_tuple + 1)]
+            try:
+                for interneuron, freq in count_dict[i].items():
+                    interneuron = number_to_interneuron(winlen, k, interneuron)
+                    interneuron_freq[interneuron] = freq
+                    if freq > freq_max:
+                        freq_max = freq
+
+                    itemset_index_dict[itemset_interneuron_to_number(max_neuron, k + 1, key, winlen, interneuron)] = itemset_index
+                    itemset_number_list.append(i)
+                    itemset_index += 1
+                    freq /= recording_time
+                    support_list.append(freq)
+                    try:
+                        sup_a = support_list_prev[itemset_index_dict_prev[itemset_interneuron_to_number(max_neuron, k + 1, key[:-1], winlen, interneuron[:-1])]]
+                    except:
+                        sup_a = support_dict[key[0]]
+                    leverage_list.append(freq - sup_a * support_dict[key[-1]])
+                    exp_sup_list.append(freq / product_number)
+            except:
+                continue
+
+            if (epsilon == 0 and freq_max >= count_threshold) or (epsilon != 0 and freq_max >= count_threshold * max((1 - ((k + 1) / epsilon) / (int((k + 1) / epsilon) + 1)), 0)):  # frequent patterns
+                itemset_list.append(i)
+                frequent_tuple_set.add(key)
+                frequent_neuron_set |= set(key)
+
+                f.write(f"{key}: {interneuron_freq}\n")
+                true_interval_flag = False  # check time intervals of detected pattern and ground truth
+                for i_motif, motif_neuron_k_permutation in motif_neuron_k_permutations:
+                    if key in motif_neuron_k_permutation:
+                        if not true_interval_flag:
+                            true_interval_set = [set() for k_ in range(k)]  # true time intervals
+                            true_interval_flag = True
+                        for k_ in range(k):
+                            for second_neuron in motif_loc_k[i_motif][motif_neuron_k[i_motif] == key[k_ + 1]][0]:
+                                for first_neuron in motif_loc_k[i_motif][motif_neuron_k[i_motif] == key[k_]][0]:
+                                    true_interval = (second_neuron - first_neuron).astype(int)
+                                    if 0 <= true_interval < winlen:
+                                        true_interval_set[k_].add(true_interval // time_interval * time_interval)
+
+                if true_interval_flag:
+                    true_interval_product = product(*true_interval_set)
+                    interneuron_freq_gt = dict()
+                    for interneuron, freq in interneuron_freq.items():
+                        if interneuron in true_interval_product:
+                            interneuron_freq_gt[interneuron] = freq
+
+                        itemset_index_list_gt.append(itemset_index_dict[itemset_interneuron_to_number(max_neuron, k + 1, key, winlen, interneuron)])
+
+                    if interneuron_freq_gt:
+                        f2.write(f"{key}: {interneuron_freq_gt}\n")
+
+        f.close()
+        f2.close()
+
+        metric_list_dict = {'support': support_list, 'leverage': leverage_list, 'exp_sup': exp_sup_list}  # , 'confidence': confidence_list, 'lift': lift_list, 'conviction': conviction_list
+
+        condition_positive_set = [set(itemset_tuple_to_number(max_neuron, k + 1, condition_positive_tuple) for condition_positive_tuple in permutations(motif_neuron_k_combination)) for motif_neuron_k_i in motif_neuron_k for motif_neuron_k_combination in combinations(motif_neuron_k_i, k + 1)]
         condition_positive = len(condition_positive_set)
-
-        condition_negative_set = set(itemset_list) - set(itemset_tuple_to_number(max_neuron, k_tuple + 1, motif_neuron_k_permutation) for motif_neuron_k_i in motif_neuron_k for motif_neuron_k_permutation in permutations(motif_neuron_k_i, k_tuple + 1))
+        condition_negative_set = set(itemset_list) - set(itemset_tuple_to_number(max_neuron, k + 1, motif_neuron_k_permutation) for motif_neuron_k_i in motif_neuron_k for motif_neuron_k_permutation in permutations(motif_neuron_k_i, k + 1))
         condition_negative = len(condition_negative_set)
 
         for metric, metric_list in tqdm(metric_list_dict.items()):
@@ -536,7 +410,7 @@ def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold
             # plt.ylabel('frequency')
             # plt.title(f'{metric} distribution (all)')
             # plt.legend()
-            # plt.savefig(f"./figure/asso_{metric}_{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}_all.png", bbox_inches='tight')
+            # plt.savefig(f"./figure/asso_{metric}_{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}_all.png", bbox_inches='tight')
             # plt.close()
             #
             # metric_list_gt = []
@@ -553,7 +427,7 @@ def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold
             # plt.ylabel('frequency')
             # plt.title(f'{metric} distribution (motif)')
             # plt.legend()
-            # plt.savefig(f"./figure/asso_{metric}_{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}_motif.png", bbox_inches='tight')
+            # plt.savefig(f"./figure/asso_{metric}_{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}_motif.png", bbox_inches='tight')
             # plt.close()
             #
             # plt.figure()
@@ -562,12 +436,12 @@ def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold
             # plt.ylabel('frequency')
             # plt.title(f'{metric} distribution (random)')
             # plt.legend()
-            # plt.savefig(f"./figure/asso_{metric}_{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}_random.png", bbox_inches='tight')
+            # plt.savefig(f"./figure/asso_{metric}_{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}_random.png", bbox_inches='tight')
             # plt.close()
 
             fpr = [1]
             tpr = [1]
-            f = open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}_asso_{metric}_acc.txt", 'w')
+            f = open(f"./txt/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}_asso_{metric}_acc.txt", 'w')
             f.write(f"threshold, recall, precision, f1_score\n")
             if metric == 'support':
                 threshold_list = np.unique(metric_list)
@@ -620,27 +494,7 @@ def apriori_read(time_interval: int, k_tuples: int, winlen: int, count_threshold
             plt.tick_params(axis='both', labelsize=15)
             plt.xlabel('False Positive Rate', fontsize=23)
             plt.ylabel('True Positive Rate', fontsize=23)
-            plt.title(f"{k_tuple + 1}-Tuple Count ROC Curve", fontsize=23)
+            plt.title(f"{k + 1}-Tuple Count ROC Curve", fontsize=23)
             plt.legend(fontsize=15)
-            plt.savefig(f'./figure/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k_tuple + 1}_asso_{metric}.png', bbox_inches='tight')
+            plt.savefig(f'./figure/{file_path}/{file_path}_{winlen}_{2 * time_interval}_{probabilistic_participation}_{epsilon}_{k + 1}_asso_{metric}.png', bbox_inches='tight')
             plt.close()
-
-        # plt.figure()
-        # sns.distplot(motif_binom_greater_list, label='Motif', kde=False)
-        # plt.xlabel('p-value')
-        # plt.ylabel('Frequency')
-        # plt.title('Binomial Test p-value Distribution (Motif)')
-        # plt.legend()
-        # plt.savefig(f"./figure/binom_greater_{file_path}_{winlen}_{2 * time_interval}_{k + 1}_motif.png", bbox_inches='tight')
-        # #plt.savefig(f"./figure/binom_greater_{file_path}_{winlen}_exact_2_motif.png")
-        # plt.close()
-        #
-        # plt.figure()
-        # sns.distplot(random_binom_greater_list, label='Random', kde=False)
-        # plt.xlabel('p-value')
-        # plt.ylabel('Frequency')
-        # plt.title('Binomial Test p-value Distribution (Random)')
-        # plt.legend()
-        # plt.savefig(f"./figure/binom_greater_{file_path}_{winlen}_{2 * time_interval}_{k + 1}_random.png", bbox_inches='tight')
-        # #plt.savefig(f"./figure/binom_greater_{file_path}_{winlen}_exact_2_random.png")
-        # plt.close()

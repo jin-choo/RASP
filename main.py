@@ -1,5 +1,6 @@
 import argparse
 from algorithms import *
+from algorithms_prev import *
 from spade import *
 from cad import *
 from asset import *
@@ -75,7 +76,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Run the frequent itemsets mining algorithm
-    if args.algorithm.rstrip() == 'read':
+    if args.algorithm.rstrip() == 'prev':
+        apriori_prev(args.algorithm.rstrip(), args.time_interval, args.k_tuples, args.winlen, args.count, args.file_path.rstrip(), args.probabilistic_participation, args.epsilon)
+    elif args.algorithm.rstrip() == 'read':
         apriori_read(args.time_interval, args.k_tuples, args.winlen, args.count, args.file_path.rstrip(), args.probabilistic_participation, args.epsilon)
     elif args.algorithm.rstrip() == 'spade':
         spade_read(args.k_tuples, args.file_path.rstrip(), args.winlen, args.probabilistic_participation)
