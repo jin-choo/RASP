@@ -1,0 +1,91 @@
+---
+########################
+# RECORDING parameters #
+########################
+
+# General parameters
+"NIDs": 50               # Total number of neurons
+
+# Recording parameters:
+"recording":
+    "recording_time": 100   # Recording time (seconds)
+    "frame_rate": 30       # Frame rate (Hz)
+    "noise": 0.05          # Standard deviation of Gaussian noise
+
+# Physiological parameters:
+"physiological":
+    "refractory_period": 5 # Refractory period (milliseconds)
+    "risetime": 22         # Half-rise time (milliseconds)
+    "decaytime": 142       # Half-decay time (milliseconds)
+    "dF_F": 0.3            # dF/F
+    "baseline": 1          # baseline
+
+
+####################
+# NOISE parameters #
+####################
+
+# Background spikes (Additive noise)
+"background":
+    "firing_rate": [0.10, 0.10]  # mean firing rate (Hz)
+                                 # For each neuron, mean firing rate ~ uniform distribution range "low" to "high"
+    "peak_to_mean": 0            # (Peak firing rate - mean firing rate) / mean firing rate
+                                 # If 0, stationary firing. Cannot be larger than 1.
+    "oscillation_frequency": 1   # sinusoidal oscillation frequency (Hz)
+    "coherent": False            # If True, oscillation phase is equal to all neurons.
+                                 # Otherwise, phase is independently chosen.
+    
+# Noise parameters
+"noise":
+    "probabilistic_participation": 1    # probability of a single spike of a motif to appear
+                                        # 1: every spike participate.
+    "temporal_jitter": 0               # standard deviation (milliseconds)
+    "time_warping": 0                   # max additional stretching (percentage)
+                                        # 0: No time warping.
+                                        # Time warping is only applicable on type 2, 3, and 5 motifs.
+
+####################
+# MOTIF parameters #
+####################
+
+# type 1 motif: Synchronously firing neurons
+"motif_type_1":
+    "firing_rate": 0.10  # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5          # the number of motifs
+
+# type 2 motif: Sequentially firing neurons
+"motif_type_2":
+    "firing_rate": 0.10  # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5          # the number of motifs
+    "min_lags": 0        # minimum lag between spikes (milliseconds)
+    "max_lags": 50       # maximum lag between spikes (milliseconds)
+
+# type 3 motif: arbitrary pattern of firing
+"motif_type_3":
+    "firing_rate": 0.10  # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5          # the number of motifs
+    "min_lags": 0        # minimum lag between spikes (milliseconds)
+    "max_lags": 50       # maximum lag between spikes (milliseconds)
+    "max_spikes": 3      # maximum number of spikes for each neuron to fire in a single motif.
+                         # follows uniform distribution 1 ~ max_spikes.
+
+# type 4 motif: Synchronous increase of firing rate
+"motif_type_4":
+    "firing_rate": 0.05  # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5          # the number of motifs
+    "window_size": 0.05  # size of the window (seconds)
+    "window_rate": 30    # firing rate inside the window (Hz), Poisson.
+
+# type 5 motif: Sequential increase of firing rate
+"motif_type_5":
+    "firing_rate": 0.05  # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5          # the number of motifs
+    "window_size": 0.05  # size of the window (seconds)
+    "window_rate": 30    # firing rate inside the window (Hz), Poisson.
+    "min_lags": 0        # minimum lag between pattern (milliseconds)
+    "max_lags": 50       # maximum lag between pattern (milliseconds)
