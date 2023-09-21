@@ -1,0 +1,140 @@
+---
+#########################
+# Simulation parameters #
+#########################
+
+"simulation":
+    "unit": 0.1            # The minimum unit of simulation (micromters)
+                           # smaller value can burden process and memory
+
+
+########################
+# RECORDING parameters #
+########################
+
+# General parameters
+"NIDs": 50               # Total number of neurons
+                           # It is automatically set on calcium imaging mode
+
+# Recording parameters:
+"recording":
+    "recording_time": 100  # Recording time (seconds)
+    "frame_rate": 200      # Frame rate (Hz)
+    "gaussian_noise": 0.05 # standard deviation of Gaussian noise
+    "shot_noise": 0.05     # (underdevelopment) Poisson noise
+    "microscopy": "LSM"    # one of ["raw", "LSM"(underdevelopment), "LFM"(underdevelopment), "XLFM"(underdevelopment)]
+                           # "raw": original calcium signal itself
+                           # "LSM": Light Sheet Microscopy
+                           # "LFM": Light Field Microscopy
+                           # "XLFM": eXtended field of view LFM
+    "z_depth": 100         # depth of focal plane (micrometer) (underdevelopment)
+    "pixel_size": 0.8      # pixel size of a camera (micrometer) (underdevelopment)
+    "FOV": [256, 256, 256] # field of view of a camera (pixels) (underdevelopment)
+                           # can be 2d or 3d
+
+
+# Physiological parameters:
+"physiological":
+    "refractory_period": 5 # Refractory period (milliseconds)
+    "preset": "Manual"   # preset of "risetime", "decaytime", "dF_F"
+                           # one of ["jGCaMP8f", "jGCaMP8m", "jGCaMP7f", "Manual"]
+    "risetime": 15         # Half-rise time (milliseconds)
+    "decaytime": 80       # Half-decay time (milliseconds)
+    "dF_F": 0.07            # dF/F0
+    "photobleaching": 0    # Half-decay time of F0 following exponential function (seconds)
+                           # If 0, no photobleaching.
+    "baseline": [0.5, 2]   # baseline (F0)
+                           # each cell sampled from uniform distribution [a, b] as
+                           # F0 depends on protein expression variability.
+                           # F = F0(1+dF/F0) + Normal(0, gaussian_noise)
+
+# Neuronal shape parameters: (underdevelopment)
+"shape":
+    "type": "NLS"                   # type of neuronal expression.
+                                    # one of ["NLS", "cytosolic"(underdevelopment), "soma"(underdevelopment), "membrane"(underdevelopment)]
+                                    # "NLS": Nuclear localized expression
+                                    # "cytosolic": cytosol expression
+                                    # "soma": soma-targeted expression
+                                    # "membrane": membrane-targeted expression
+    "diameter": 8                   # diameter of a neuron (micrometer)
+    "diameter_std": 0.5             # standard deviation of a diameter of a neuron (micrometer)
+    "diameter_nucleus": 5           # diameter of a nucleus of neurons (micrometer)
+    "diameter_nucleus_std": 0.20    # standard deviation of a diameter of a nucleus of neurons (micrometer)
+    "membrane_thickness": 0.2       # thickness of a membrane of neurons (micrometer)
+    "distance": [5, 20]             # min/max distance between neuron and neuron (micrometer)
+
+
+####################
+# NOISE parameters #
+####################
+
+# Background spikes (Additive noise)
+"background":
+    "firing_rate": [2.0, 2.0]        # mean firing rate (Hz)
+                                 # For each neuron, mean firing rate ~ uniform distribution range "low" to "high"
+    "peak_to_mean": 0            # (Peak firing rate - mean firing rate) / mean firing rate
+                                 # If 0, stationary firing. Cannot be larger than 1.
+    "oscillation_frequency": 1   # sinusoidal oscillation frequency (Hz)
+    "coherent": False            # If True, oscillation phase is equal to all neurons.
+                                 # Otherwise, phase is independently chosen.
+
+    # Currently bursting is only available on stationary firing mode.
+    "burst_lambda": 0            # The number of spikes in each burst follows the Poission process
+                                 # The number of spikes = 1 + Poisson(lambda=burst_lambda)
+    "intra_burst_time": [5, 6]   # min/max time between bursting spikes (milliseconds)
+                                 # chosen from uniform distribution
+
+# Noise parameters
+"noise":
+    "probabilistic_participation": 1    # probability of a single spike of a motif to appear
+                                        # 1: every spike participate.
+    "temporal_jitter": 0                # standard deviation (milliseconds)
+    "time_warping": 0                   # max additional stretching (percentage)
+                                        # 0: No time warping.
+                                        # Time warping is only applicable on type 2, 3, and 5 motifs.
+
+####################
+# MOTIF parameters #
+####################
+
+# type 1 motif: Synchronously firing neurons
+"motif_type_1":
+    "firing_rate": 0.2  # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5          # the number of motifs
+
+# type 2 motif: Sequentially firing neurons
+"motif_type_2":
+    "firing_rate": 0.2   # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5         # the number of motifs
+    "min_lags": 0        # minimum lag between spikes (milliseconds)
+    "max_lags": 100      # maximum lag between spikes (milliseconds)
+
+# type 3 motif: arbitrary pattern of firing
+"motif_type_3":
+    "firing_rate": 0.2   # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 5         # the number of motifs
+    "min_lags": 0        # minimum lag between spikes (milliseconds)
+    "max_lags": 100      # maximum lag between spikes (milliseconds)
+    "max_spikes": 3      # maximum number of spikes for each neuron to fire in a single motif.
+                         # follows uniform distribution 1 ~ max_spikes.
+
+# type 4 motif: Synchronous increase of firing rate
+"motif_type_4":
+    "firing_rate": 0.3   # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 10         # the number of motifs
+    "window_size": 0.3   # size of the window (seconds)
+    "window_rate": 5     # firing rate inside the window (Hz), Poisson.
+
+# type 5 motif: Sequential increase of firing rate
+"motif_type_5":
+    "firing_rate": 0.3     # firing rate of each motif
+    "neurons": 5         # the number of neurons in each motif
+    "motifs": 10         # the number of motifs
+    "window_size": 0.3   # size of the window (seconds)
+    "window_rate": 5     # firing rate inside the window (Hz), Poisson.
+    "min_lags": 0        # minimum lag between pattern (milliseconds)
+    "max_lags": 100      # maximum lag between pattern (milliseconds)

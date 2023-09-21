@@ -1,0 +1,20 @@
+-e git+https://github.com/NeuralEnsemble/elephant.git@df8e96212e121d5931bab6c9ae82e059c91ec2ad#egg=elephant
+backports.os==0.1.1
+neo~=0.11.0.dev0
+numpy~=1.18.1
+matplotlib~=3.1.3
+mat73==0.59
+more-itertools==7.2.0
+mpmath==1.1.0
+yaml~=0.1.7
+pyyaml~=5.3
+quantities==0.13.0
+scikit-learn~=0.22.1
+scipy~=1.6.3
+tqdm~=4.42.1
+seaborn~=0.10.0
+statsmodels~=0.11.0
+pandas~=1.0.1
+setuptools~=45.2.0
+scikit-image~=0.16.2
+unicodecsv==0.14.1
