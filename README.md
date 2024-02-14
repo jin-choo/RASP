@@ -8,10 +8,6 @@ RASP is built upon the following  ideas, each devised to address the above limit
 * **Resource-Adaptive Automatic Hyperparameter Tuning**: RASP gradually increases the sizes of TSPs to detect larger TSPs. In order to maintain a proper number of TSPs of each size, \method adaptively adjusts thresholds based on the available resources, enhancing its usability.
 * **Tree-based Concise Data Structure**: RASP employs a tree-based compact data structure to efficiently manage the increasing number of TSPs, improving both speed and space efficiency.
 
-## Supplementary Document
-
-Please see [supplementary](./supplementary.pdf).
-
 ## Requirements
 
 To install requirements, run the following command on your terminal:
