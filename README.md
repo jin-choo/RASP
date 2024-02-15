@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 ## RASP on Neuron Activity Datasets
 
-To perform RASP on neuron activity datasets, run this command:
+To execute RASP on neuron activity datasets, run this command:
 
 ```
 ./run.sh
@@ -29,7 +29,7 @@ To perform RASP on neuron activity datasets, run this command:
 
 ## RASP on an E-commerce Dataset
 
-To perform RASP on an e-commerce dataset, run this command:
+To execute RASP on an e-commerce dataset, run this command:
 
 ```
 ./run_case.sh
