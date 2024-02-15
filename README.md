@@ -10,7 +10,7 @@ RASP is built upon the following  ideas, each devised to address the above limit
 
 ## Datasets
 
-E-commerce dataset obtained from YOOCHOOSE Gmbh is available at this [link](https://www.dropbox.com/scl/fo/xqamn47x7ybsnww3fgmyf/h?rlkey=mzdfrn5ncaq9696ju8botp73m&dl=0).
+E-commerce dataset used in additional experiment obtained from YOOCHOOSE Gmbh [source](https://www.kaggle.com/datasets/chadgostopp/recsys-challenge-2015) is available at this [link](https://www.dropbox.com/scl/fo/xqamn47x7ybsnww3fgmyf/h?rlkey=mzdfrn5ncaq9696ju8botp73m&dl=0).
 
 ## Requirements
 
