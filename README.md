@@ -12,10 +12,10 @@ RASP is built upon the following  ideas, each devised to address the above limit
 
 All datasets are available at this [link](https://www.dropbox.com/scl/fo/xqamn47x7ybsnww3fgmyf/h?rlkey=mzdfrn5ncaq9696ju8botp73m&dl=0).
 
-| Experiment  | Dataset    |   # Nodes  | # Hyperedges | Source |
-|-------------|------------|:----------:|:------------:|:----------:|
-| Main        | DBLP       | 1,924,991  |  3,700,067   | [CN2 Simulator](https://github.com/NICALab/CN2-Simulator) |
-| Additional  | Geology    | 1,256,385  |  1,590,335   | [YOOCHOOSE Gmbh](https://www.kaggle.com/datasets/chadgostopp/recsys-challenge-2015) |
+| Experiment | Dataset         | Event              | Source          |
+|------------|-----------------|:------------------:|:---------------:|
+| Main       | Neuron Activity | Spike of a Neuron  | [CN2 Simulator](https://github.com/NICALab/CN2-Simulator) |
+| Additional | E-Commerce      | Click on a product | [YOOCHOOSE Gmbh](https://www.kaggle.com/datasets/chadgostopp/recsys-challenge-2015) |
 
 ## Requirements
 
