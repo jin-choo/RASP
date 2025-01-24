@@ -1,6 +1,6 @@
 # RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations
 
-This repository contains the source code for the paper [RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations](https://).
+This repository contains the source code for the paper [RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations](https://doi.org/10.48786/edbt.2025.19).
 
 In this work, we propose RASP, an algorithm for **R**obust and resource-**A**daptive mining of temporal **S**equential **P**atterns.
 RASP is built upon the following  ideas, each devised to address the above limitations: 
