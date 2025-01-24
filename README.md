@@ -52,5 +52,10 @@ python main.py -a read_ndcg_rc_exp
 
 This code is free and open source for only academic/research purposes (non-commercial). If you use this code as part of any published research, please acknowledge the following paper.
 ```
-
+@article{choo2025rasp,
+  title={RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations},
+  author={Choo, Hyunjin and Eom, Minho and Kim, Gyuri and Yoon, Young-Gyu and Shin, Kijung},
+  booktitle={2025 International Conference on Extending Database Technology (EDBT)},
+  year={2025}
+}
 ```
