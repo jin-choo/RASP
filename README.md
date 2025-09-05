@@ -1,4 +1,4 @@
-# RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations
+# RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations (EDBT'25)
 
 This repository contains the source code for the paper [RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations](https://doi.org/10.48786/edbt.2025.19).
 
