@@ -1,6 +1,6 @@
 # RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations (EDBT'25)
 
-This repository contains the source code for the paper [RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations](https://doi.org/10.48786/edbt.2025.19).
+This repository contains the source code for the paper [RASP: Robust Mining of Frequent Temporal Sequential Patterns under Temporal Variations](https://doi.org/10.48786/edbt.2025.19) by [Hyunjin Choo](https://github.com/jin-choo/), [Minho Eom](https://www.linkedin.com/in/minho-eom/), [Gyuri Kim](https://scholar.google.com/citations?user=BkPHqf4AAAAJ&hl=en&oi=sra), [Young-Gyu Yoon](https://nica.kaist.ac.kr/), and [Kijung Shin](https://kijungs.github.io/), to be presented at [SDM 2022](https://www.siam.org/conferences/cm/conference/sdm22).
 
 In this work, we propose RASP, an algorithm for **R**obust and resource-**A**daptive mining of temporal **S**equential **P**atterns.
 RASP is built upon the following  ideas, each devised to address the above limitations: 
